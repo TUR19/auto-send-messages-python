@@ -24,14 +24,21 @@ class BrowserManager:
             self.browser_context = await self.playwright.chromium.launch_persistent_context(user_data_dir, headless=False)
         logger.info(f"Запуск браузера с user_data_dir: {user_data_dir}")
         return self.browser_context
-
+    
     async def stop_browser(self):
-        logger.info("Остановка браузера.")
+        logger.info("Остановка браузера")
         if self.browser_context:
-            await self.browser_context.close()
+            try:
+                await self.browser_context.close()
+            except Exception as e:
+                logger.warning(f"Ошибка при закрытии браузера: {e}")
             self.browser_context = None
+
         if self.playwright:
-            await self.playwright.stop()
+            try:
+                await self.playwright.stop()
+            except Exception as e:
+                logger.warning(f"Ошибка при остановке Playwright: {e}")
             self.playwright = None
 
     def reset_timer(self):
@@ -43,7 +50,32 @@ class BrowserManager:
         self.timer.start()
 
     def is_browser_running(self):
-        return self.browser_context is not None
+        # return self.browser_context is not None and not self.browser_context.is_closed()
+        if self.browser_context is None:
+            return False
+        try:
+            _ = self.browser_context.pages  # доступ безопасен
+            return True
+        except Exception as e:
+            logger.warning(f"Контекст закрыт или недоступен: {e}")
+            return False
+
+    async def ensure_browser(self, user_data_dir: str):
+        restart_needed = False
+        
+        if self.browser_context is None:
+            restart_needed = True
+        else:
+            try:
+                _ = await self.browser_context.new_page()
+            except Exception as e:
+                logger.warning(f"Контекст не работает. Причина: {e}")
+                restart_needed = True
+
+        if restart_needed:
+            logger.info("Запуск браузера")
+            await self.stop_browser()
+            await self.start_browser(user_data_dir)
 
 
 async def check_user_data_dir(user_data_dir: str):

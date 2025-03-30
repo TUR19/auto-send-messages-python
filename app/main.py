@@ -45,10 +45,7 @@ async def startup_event():
 async def api_send_message_get(phone_number: str, message: str):
     logger.info(f"Получен GET-запрос: /send-message-whatsapp?phone_number={phone_number}&message={message}")
     try:
-        if not browser_manager.is_browser_running():
-            logger.info("Браузер не запущен. Запускаем браузер...")
-            await browser_manager.start_browser(USER_DATA_DIR)
-
+        await browser_manager.ensure_browser(USER_DATA_DIR)
         browser_manager.reset_timer()
         logger.info("Отправка сообщения начинается...")
         await send_message_whatsapp(browser_manager.browser_context, phone_number.replace(" ", ""), message)
@@ -62,10 +59,7 @@ async def api_send_message_get(phone_number: str, message: str):
 async def api_send_message_get(phone_number: str, message: str):
     logger.info(f"Получен GET-запрос: /send-message-telegram?phone_number={phone_number}&message={message}")
     try:
-        if not browser_manager.is_browser_running():
-            logger.info("Браузер не запущен. Запускаем браузер...")
-            await browser_manager.start_browser(USER_DATA_DIR)
-
+        await browser_manager.ensure_browser(USER_DATA_DIR)
         browser_manager.reset_timer()
         logger.info("Отправка сообщения начинается...")
         await send_message_telegram(browser_manager.browser_context, phone_number.replace(" ", ""), message)
