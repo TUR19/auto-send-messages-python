@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.browser_manager import browser_manager, check_user_data_dir
-from app.whatsapp import send_message
+from app.whatsapp import send_message_whatsapp
+from app.telegram import send_message_telegram
 from app.models import MessageRequest
 import logging
 import os
@@ -40,9 +41,9 @@ async def startup_event():
     await check_user_data_dir(USER_DATA_DIR)
     logger.info("Startup завершён успешно.")
 
-@app.get("/send-message/")
+@app.get("/send-message-whatsapp/")
 async def api_send_message_get(phone_number: str, message: str):
-    logger.info(f"Получен GET-запрос: /send-message?phone_number={phone_number}&message={message}")
+    logger.info(f"Получен GET-запрос: /send-message-whatsapp?phone_number={phone_number}&message={message}")
     try:
         if not browser_manager.is_browser_running():
             logger.info("Браузер не запущен. Запускаем браузер...")
@@ -50,7 +51,24 @@ async def api_send_message_get(phone_number: str, message: str):
 
         browser_manager.reset_timer()
         logger.info("Отправка сообщения начинается...")
-        await send_message(browser_manager.browser_context, phone_number, message)
+        await send_message_whatsapp(browser_manager.browser_context, phone_number.replace(" ", ""), message)
+        logger.info("Сообщение успешно отправлено.")
+        return {"status": "success", "message": "Сообщение успешно отправлено!"}
+    except Exception as e:
+        logger.error(f"Ошибка при отправке сообщения: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/send-message-telegram/")
+async def api_send_message_get(phone_number: str, message: str):
+    logger.info(f"Получен GET-запрос: /send-message-telegram?phone_number={phone_number}&message={message}")
+    try:
+        if not browser_manager.is_browser_running():
+            logger.info("Браузер не запущен. Запускаем браузер...")
+            await browser_manager.start_browser(USER_DATA_DIR)
+
+        browser_manager.reset_timer()
+        logger.info("Отправка сообщения начинается...")
+        await send_message_telegram(browser_manager.browser_context, phone_number.replace(" ", ""), message)
         logger.info("Сообщение успешно отправлено.")
         return {"status": "success", "message": "Сообщение успешно отправлено!"}
     except Exception as e:
