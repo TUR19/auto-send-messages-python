@@ -41,30 +41,32 @@ async def startup_event():
     await check_user_data_dir(USER_DATA_DIR)
     logger.info("Startup завершён успешно.")
 
-@app.get("/send-message-whatsapp/")
-async def api_send_message_get(phone_number: str, message: str):
-    logger.info(f"Получен GET-запрос: /send-message-whatsapp?phone_number={phone_number}&message={message}")
+# POST для WhatsApp
+@app.post("/send-message-whatsapp/")
+async def api_send_message_post(data: MessageRequest):
+    logger.info(f"Получен POST-запрос: /send-message-whatsapp -> номер: {data.phone_number}, сообщение: {data.message}")
     try:
         await browser_manager.ensure_browser(USER_DATA_DIR)
         browser_manager.reset_timer()
-        logger.info("Отправка сообщения начинается...")
-        await send_message_whatsapp(browser_manager.browser_context, phone_number.replace(" ", ""), message)
-        logger.info("Сообщение успешно отправлено.")
+        logger.info("Отправка сообщения в WhatsApp начинается...")
+        await send_message_whatsapp(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
+        logger.info("Сообщение в WhatsApp успешно отправлено.")
         return {"status": "success", "message": "Сообщение успешно отправлено!"}
     except Exception as e:
-        logger.error(f"Ошибка при отправке сообщения: {e}")
+        logger.error(f"Ошибка при отправке WhatsApp-сообщения: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-@app.get("/send-message-telegram/")
-async def api_send_message_get(phone_number: str, message: str):
-    logger.info(f"Получен GET-запрос: /send-message-telegram?phone_number={phone_number}&message={message}")
+
+# POST для Telegram
+@app.post("/send-message-telegram/")
+async def api_send_message_post(data: MessageRequest):
+    logger.info(f"Получен POST-запрос: /send-message-telegram -> номер: {data.phone_number}, сообщение: {data.message}")
     try:
         await browser_manager.ensure_browser(USER_DATA_DIR)
         browser_manager.reset_timer()
-        logger.info("Отправка сообщения начинается...")
-        await send_message_telegram(browser_manager.browser_context, phone_number.replace(" ", ""), message)
-        logger.info("Сообщение успешно отправлено.")
+        logger.info("Отправка сообщения в Telegram начинается...")
+        await send_message_telegram(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
+        logger.info("Сообщение в Telegram успешно отправлено.")
         return {"status": "success", "message": "Сообщение успешно отправлено!"}
     except Exception as e:
-        logger.error(f"Ошибка при отправке сообщения: {e}")
+        logger.error(f"Ошибка при отправке Telegram-сообщения: {e}")
         raise HTTPException(status_code=500, detail=str(e))
