@@ -62,12 +62,18 @@ class BrowserManager:
 
     async def ensure_browser(self, user_data_dir: str):
         restart_needed = False
-        
+
         if self.browser_context is None:
             restart_needed = True
         else:
             try:
-                _ = await self.browser_context.new_page()
+                pages = self.browser_context.pages
+                if not pages:
+                    await self.browser_context.new_page()
+                else:
+                    # Закрыть все лишние вкладки кроме первой
+                    for p in pages[1:]:
+                        await p.close()
             except Exception as e:
                 logger.warning(f"Контекст не работает. Причина: {e}")
                 restart_needed = True
@@ -76,6 +82,7 @@ class BrowserManager:
             logger.info("Запуск браузера")
             await self.stop_browser()
             await self.start_browser(user_data_dir)
+
 
 
 async def check_user_data_dir(user_data_dir: str):
