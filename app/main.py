@@ -41,61 +41,54 @@ async def startup_event():
     logger.info("Событие запуска приложения. Проверка user_data_dir...")
     await check_user_data_dir(USER_DATA_DIR)
     logger.info("Startup завершён успешно.")
+    
+    
+@app.post("/send-message/")
+async def send_message_api(data: MessageRequest):
+    logger.info(f"Запрос на /send-message:\nканал: {data.channel};\nномер: {data.phone_number};\nсообщение: {data.message}")
 
-# POST для WhatsApp
-@app.post("/send-message-whatsapp/")
-async def api_send_message_post(data: MessageRequest):
-    logger.info(f"Получен POST-запрос: /send-message-whatsapp -> номер: {data.phone_number}, сообщение: {data.message}")
     try:
         await browser_manager.ensure_browser(USER_DATA_DIR)
         browser_manager.reset_timer()
-        logger.info("Отправка сообщения в WhatsApp начинается...")
-        await send_message_whatsapp(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
-        logger.info("Сообщение успешно отправлено через WhatsApp.")
+
+        # подготовим ответы
+        responses = []
+
+        # отправка в WhatsApp
+        if data.channel in ("whatsapp", "both"):
+            try:
+                logger.info("Отправка в WhatsApp.")
+                await send_message_whatsapp(browser_manager.browser_context, data.phone_number, data.message)
+                responses.append("Сообщение успешно отправлено через WhatsApp.")
+            except Exception as e:
+                logger.error(f"Ошибка при отправке через WhatsApp: {e}")
+                responses.append(f"Ошибка при отправке через WhatsApp: {str(e)}")
+
+        # отправка в Telegram
+        if data.channel in ("telegram", "both"):
+            try:
+                logger.info("Отправка в Telegram.")
+                await send_message_telegram(browser_manager.browser_context, data.phone_number, data.message)
+                responses.append("Сообщение успешно отправлено через Telegram")
+            except Exception as e:
+                logger.error(f"Ошибка при отправке через Telegram: {e}")
+                responses.append(f"Ошибка при отправке через Telegram: {str(e)}")
+
         return JSONResponse(
             status_code=200,
             content={
                 "success": True,
-                "message": "Сообщение успешно отправлено через WhatsApp.",
-                "error": None
-            }
-        )
-    except Exception as e:
-        logger.error(f"Ошибка при отправке WhatsApp-сообщения: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "message": "Ошибка при отправке WhatsApp-сообщения",
-                "error": str(e)
+                "message": "\n".join(responses)
             }
         )
 
-# POST для Telegram
-@app.post("/send-message-telegram/")
-async def api_send_message_post(data: MessageRequest):
-    logger.info(f"Получен POST-запрос: /send-message-telegram -> номер: {data.phone_number}, сообщение: {data.message}")
-    try:
-        await browser_manager.ensure_browser(USER_DATA_DIR)
-        browser_manager.reset_timer()
-        logger.info("Отправка сообщения в Telegram начинается...")
-        await send_message_telegram(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
-        logger.info("Сообщение успешно отправлено через Telegram.")
-        return JSONResponse(
-            status_code=200,
-            content={
-                "success": True,
-                "message": "Сообщение успешно отправлено через Telegram.",
-                "error": None
-            }
-        )
     except Exception as e:
-        logger.error(f"Ошибка при отправке Telegram-сообщения: {e}")
+        logger.error(f"Глобальная ошибка: {e}")
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "message": "Ошибка при отправке Telegram-сообщения",
+                "message": "Ошибка при обработке запроса",
                 "error": str(e)
             }
         )
