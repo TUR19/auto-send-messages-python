@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.browser_manager import browser_manager, check_user_data_dir
 from app.whatsapp import send_message_whatsapp
@@ -50,11 +51,25 @@ async def api_send_message_post(data: MessageRequest):
         browser_manager.reset_timer()
         logger.info("Отправка сообщения в WhatsApp начинается...")
         await send_message_whatsapp(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
-        logger.info("Сообщение в WhatsApp успешно отправлено.")
-        return {"status": "success", "message": "Сообщение успешно отправлено!"}
+        logger.info("Сообщение успешно отправлено через WhatsApp.")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Сообщение успешно отправлено через WhatsApp.",
+                "error": None
+            }
+        )
     except Exception as e:
         logger.error(f"Ошибка при отправке WhatsApp-сообщения: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": "Ошибка при отправке WhatsApp-сообщения",
+                "error": str(e)
+            }
+        )
 
 # POST для Telegram
 @app.post("/send-message-telegram/")
@@ -65,8 +80,22 @@ async def api_send_message_post(data: MessageRequest):
         browser_manager.reset_timer()
         logger.info("Отправка сообщения в Telegram начинается...")
         await send_message_telegram(browser_manager.browser_context, data.phone_number.replace(" ", ""), data.message)
-        logger.info("Сообщение в Telegram успешно отправлено.")
-        return {"status": "success", "message": "Сообщение успешно отправлено!"}
+        logger.info("Сообщение успешно отправлено через Telegram.")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Сообщение успешно отправлено через Telegram.",
+                "error": None
+            }
+        )
     except Exception as e:
         logger.error(f"Ошибка при отправке Telegram-сообщения: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": "Ошибка при отправке Telegram-сообщения",
+                "error": str(e)
+            }
+        )
